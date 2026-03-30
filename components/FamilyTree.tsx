@@ -1,15 +1,8 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
-import {
-  select,
-  hierarchy,
-  tree,
-  linkVertical,
-  HierarchyPointLink,
-  HierarchyPointNode,
-} from "d3";
+import { select } from "d3";
 
+// ── Types ────────────────────────────────────────────────────────────────────
 type TreeNode = {
   name: string;
   birthYear?: string;
@@ -18,543 +11,440 @@ type TreeNode = {
   children?: TreeNode[];
 };
 
-// ── Data keluarga lengkap ──────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function flattenTree(n: TreeNode): TreeNode[] {
+  return [n, ...(n.children ?? []).flatMap(flattenTree)];
+}
+function getSubtreeNames(n: TreeNode): Set<string> {
+  const s = new Set<string>([n.name]);
+  (n.children ?? []).forEach(c => getSubtreeNames(c).forEach(x => s.add(x)));
+  return s;
+}
+function getDepthMap(n: TreeNode, d = 0): Record<string, number> {
+  const m: Record<string, number> = { [n.name]: d };
+  (n.children ?? []).forEach(c => Object.assign(m, getDepthMap(c, d + 1)));
+  return m;
+}
+function findPath(root: TreeNode, target: string, path: TreeNode[] = []): TreeNode[] | null {
+  const p = [...path, root];
+  if (root.name === target) return p;
+  for (const c of root.children ?? []) { const r = findPath(c, target, p); if (r) return r; }
+  return null;
+}
+
+// ── Family data (20 tree members) ────────────────────────────────────────────
 const familyData: TreeNode = {
-  name: "Cadera",
-  birthYear: "1940",
-  residence: "Jakarta",
-  image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lotnok",
+  name: "Cadera", birthYear: "1940", residence: "Jakarta",
+  image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Cadera",
   children: [
     {
-      name: "Ramli",
-      birthYear: "1965",
-      residence: "Bandung",
+      name: "Ramli", birthYear: "1965", residence: "Bandung",
       image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ramli",
       children: [
         {
-          name: "Dian",
-          birthYear: "1990",
-          residence: "Surabaya",
+          name: "Dian", birthYear: "1990", residence: "Surabaya",
           image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dian",
-          children: [
-            {
-              name: "Zahra",
-              birthYear: "2015",
-              residence: "Surabaya",
-              image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Zahra",
-            },
-          ],
+          children: [{
+            name: "Zahra", birthYear: "2015", residence: "Surabaya",
+            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Zahra",
+            children: [
+              { name: "Dinda", birthYear: "2033", residence: "Surabaya", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda33" },
+              { name: "Ahmad", birthYear: "2035", residence: "Surabaya", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad35" },
+              { name: "Putri", birthYear: "2036", residence: "Surabaya", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Putri36" },
+            ],
+          }],
         },
-        {
-          name: "Budi",
-          birthYear: "1993",
-          residence: "Medan",
-          image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Budi",
-        },
+        { name: "Budi", birthYear: "1993", residence: "Medan", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Budi" },
       ],
     },
     {
-      name: "Sari",
-      birthYear: "1968",
-      residence: "Yogyakarta",
+      name: "Sari", birthYear: "1968", residence: "Yogyakarta",
       image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sari",
       children: [
+        { name: "Andi", birthYear: "1992", residence: "Yogyakarta", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Andi" },
         {
-          name: "Andi",
-          birthYear: "1992",
-          residence: "Yogyakarta",
-          image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Andi",
-        },
-        {
-          name: "Rina",
-          birthYear: "1995",
-          residence: "Bali",
+          name: "Rina", birthYear: "1995", residence: "Bali",
           image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rina",
           children: [
             {
-              name: "Kevin",
-              birthYear: "2018",
-              residence: "Bali",
+              name: "Kevin", birthYear: "2018", residence: "Bali",
               image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kevin",
+              children: [
+                { name: "Rafi", birthYear: "2038", residence: "Bali", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rafi38" },
+                { name: "Nisa", birthYear: "2040", residence: "Bali", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Nisa40" },
+              ],
             },
             {
-              name: "Lila",
-              birthYear: "2020",
-              residence: "Bali",
+              name: "Lila", birthYear: "2020", residence: "Bali",
               image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lila",
+              children: [
+                { name: "Ariel", birthYear: "2039", residence: "Bali", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ariel39" },
+              ],
             },
           ],
         },
       ],
     },
     {
-      name: "Hendra",
-      birthYear: "1972",
-      residence: "Makassar",
+      name: "Hendra", birthYear: "1972", residence: "Makassar",
       image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hendra",
-      children: [
-        {
-          name: "Tono",
-          birthYear: "1998",
-          residence: "Makassar",
-          image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tono",
-        },
-      ],
+      children: [{
+        name: "Tono", birthYear: "1998", residence: "Makassar",
+        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tono",
+        children: [
+          { name: "Bagas", birthYear: "2025", residence: "Makassar", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bagas25" },
+          { name: "Cinta", birthYear: "2027", residence: "Makassar", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Cinta27" },
+        ],
+      }],
     },
   ],
 };
 
-// Build breadcrumb path to a given node name
-function findPath(
-  root: TreeNode,
-  target: string,
-  path: TreeNode[] = []
-): TreeNode[] | null {
-  const newPath = [...path, root];
-  if (root.name === target) return newPath;
-  for (const child of root.children ?? []) {
-    const result = findPath(child, target, newPath);
-    if (result) return result;
-  }
-  return null;
-}
+// ── 2 standalone ancestors (shown at bottom row, no parent–child edges) ───────
+const ANCESTORS = [
+  { name: "H. Hamid",     birthYear: "1910", residence: "Jakarta",  image: "https://api.dicebear.com/7.x/avataaars/svg?seed=HHamid10" },
+  { name: "Hj. Fatimah",  birthYear: "1913", residence: "Jakarta",  image: "https://api.dicebear.com/7.x/avataaars/svg?seed=HjFatimah" },
+];
 
-const ANIM_DURATION = 380; // ms
+// ── Fixed slot positions: exact circle centers detected from tree-bg.png ──────
+// Image: 1240 × 1627 px. Values = (xPct, yPct) of image.
+// [0](.138,.096) [1](.312,.071) [2](.428,.135) [3](.541,.071) [4](.655,.121)
+// [5](.769,.059) [6](.851,.127) [7](.158,.247) [8](.246,.164) [9](.395,.234)
+// [10](.581,.220) [11](.822,.233) [12](.143,.411) [13](.414,.374) [14](.585,.364)
+// [15](.840,.400) [16](.148,.544) [17](.480,.495) [18](.813,.590)
+// [19](.178,.689) [20](.491,.703) [21](.787,.726)
+const FIXED_SLOTS: Record<string, [number, number]> = {
+  // Gen 4 – top row
+  Dinda:        [0.138, 0.096],
+  Ahmad:        [0.312, 0.071],
+  Rafi:         [0.428, 0.135],
+  Nisa:         [0.541, 0.071],
+  Ariel:        [0.655, 0.121],
+  Bagas:        [0.769, 0.059],
+  Cinta:        [0.851, 0.127],
+  // Gen 3 – upper-mid
+  Zahra:        [0.158, 0.247],
+  Putri:        [0.246, 0.164],
+  Kevin:        [0.395, 0.234],
+  Lila:         [0.581, 0.220],
+  Tono:         [0.822, 0.233],
+  // Gen 2 – middle
+  Dian:         [0.143, 0.411],
+  Budi:         [0.414, 0.374],
+  Andi:         [0.585, 0.364],
+  Rina:         [0.840, 0.400],
+  // Gen 1 – lower-mid
+  Ramli:        [0.148, 0.544],
+  Sari:         [0.480, 0.495],
+  Hendra:       [0.813, 0.590],
+  // Gen 0 + ancestors – bottom row
+  "H. Hamid":   [0.178, 0.689],
+  Cadera:       [0.491, 0.703],
+  "Hj. Fatimah":[0.787, 0.726],
+};
 
+// All parent→child edges in the family tree
+const ALL_EDGES: [string, string][] = [
+  ["Cadera","Ramli"],["Cadera","Sari"],["Cadera","Hendra"],
+  ["Ramli","Dian"],["Ramli","Budi"],
+  ["Sari","Andi"],["Sari","Rina"],
+  ["Hendra","Tono"],
+  ["Dian","Zahra"],
+  ["Rina","Kevin"],["Rina","Lila"],
+  ["Zahra","Dinda"],["Zahra","Ahmad"],["Zahra","Putri"],
+  ["Kevin","Rafi"],["Kevin","Nisa"],
+  ["Lila","Ariel"],
+  ["Tono","Bagas"],["Tono","Cinta"],
+];
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const ANIM  = 360;
+const R     = 36;         // node radius px
+const IMG_W = 1240;
+const IMG_H = 1627;
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function FamilyTree() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const svgRef       = useRef<SVGSVGElement | null>(null);
 
-  // ── React state (for rendering) ──────────────────────────────────────────
   const [currentRoot, setCurrentRoot] = useState<TreeNode>(familyData);
-  const [breadcrumb, setBreadcrumb] = useState<TreeNode[]>([familyData]);
-  const [animating, setAnimating] = useState(false);
+  const [breadcrumb,  setBreadcrumb]  = useState<TreeNode[]>([familyData]);
+  const [animating,   setAnimating]   = useState(false);
 
-  // ── Refs that mirror state — NEVER stale inside event handlers ───────────
-  // This is the core fix: the click handler reads from refs, NOT from
-  // the React state closure which can be captured at the wrong moment.
-  const animatingRef = useRef(false);
-  const currentRootRef = useRef<TreeNode>(familyData);
+  const animRef    = useRef(false);
+  const rootRef    = useRef<TreeNode>(familyData);
+  animRef.current  = animating;
+  rootRef.current  = currentRoot;
 
-  // Keep refs in sync with state after every render
-  animatingRef.current = animating;
-  currentRootRef.current = currentRoot;
-
-  // ── Core navigate function — reads from refs, safe from stale closures ───
-  // This is NOT a useCallback; being a plain function is intentional so it
-  // always uses the latest ref values without needing dependency arrays.
   const doNavigate = (node: TreeNode, crumb: TreeNode[]) => {
-    // Guard: use ref so we always read the true live value
-    if (animatingRef.current) return;
-    if (node.name === currentRootRef.current.name) return;
-
-    // Lock immediately via ref (synchronous) and state (async re-render)
-    animatingRef.current = true;
+    if (animRef.current) return;
+    if (node.name === rootRef.current.name) return;
+    animRef.current = true;
     setAnimating(true);
-
-    // Phase 1: fade-out current tree
-    const svg = select(svgRef.current!);
-    svg
+    select(svgRef.current!)
       .selectAll<SVGGElement, unknown>(".tree-content")
-      .transition()
-      .duration(ANIM_DURATION)
-      .style("opacity", "0")
-      .on("end", () => {
-        // Phase 2: update React state → triggers draw effect
-        setCurrentRoot(node);
-        setBreadcrumb(crumb);
-        // Also update the ref synchronously so subsequent
-        // guard checks are correct before React re-renders
-        currentRootRef.current = node;
-      });
+      .transition().duration(ANIM).style("opacity", "0")
+      .on("end", () => { setCurrentRoot(node); setBreadcrumb(crumb); rootRef.current = node; });
   };
 
-  // ── Draw effect — runs whenever currentRoot changes ─────────────────────
+  // ── Draw ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
-
-    const width  = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    const W = containerRef.current.clientWidth;
+    const H = containerRef.current.clientHeight;
 
     const svg = select(svgRef.current);
     svg.selectAll("*").remove();
-    svg.attr("width", width).attr("height", height);
+    svg.attr("width", W).attr("height", H);
 
-    // ── SVG filters ──────────────────────────────────────────────────────
+    // Defs
     const defs = svg.append("defs");
-    defs
-      .append("filter")
-      .attr("id", "blur-bg")
-      .append("feGaussianBlur")
-      .attr("stdDeviation", "2.5");
+    const shad = defs.append("filter").attr("id", "sh");
+    shad.append("feDropShadow").attr("dx",0).attr("dy",2).attr("stdDeviation",3)
+      .attr("flood-color","rgba(0,0,0,0.28)");
 
-    // ── Background image ─────────────────────────────────────────────────
-    svg
-      .append("image")
+    // Background – full image, no crop
+    svg.append("image")
       .attr("href", "/tree-bg.png")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("preserveAspectRatio", "xMidYMid slice")
-      .attr("opacity", 0.55)
-      .style("filter", "url(#blur-bg)");
+      .attr("width", W).attr("height", H).attr("x",0).attr("y",0)
+      .attr("preserveAspectRatio","xMidYMid meet")
+      .attr("opacity", 0.88);
 
-    // ── Canopy bounding box ──────────────────────────────────────────────
-    const canopyLeft   = width  * 0.12;
-    const canopyRight  = width  * 0.88;
-    const canopyTop    = height * 0.06;
-    const canopyBottom = height * 0.72;
-    const canopyW = canopyRight - canopyLeft;
-    const canopyH = canopyBottom - canopyTop;
+    // Convert image% → SVG px (with "meet" letterboxing)
+    const scale  = Math.min(W / IMG_W, H / IMG_H);
+    const iW     = IMG_W * scale;
+    const iH     = IMG_H * scale;
+    const offX   = (W - iW) / 2;
+    const offY   = (H - iH) / 2;
+    const toXY   = (xp: number, yp: number): [number, number] =>
+      [offX + xp * iW, offY + yp * iH];
 
-    const nodeWidth  = 210;
-    const nodeHeight = 108;
+    // Which nodes are visible?
+    const isRoot    = currentRoot.name === familyData.name;
+    const subNames  = getSubtreeNames(currentRoot);
+    const depthMap  = getDepthMap(currentRoot); // depth relative to currentRoot
 
-    // ── D3 tree layout ───────────────────────────────────────────────────
-    const root = hierarchy<TreeNode>(currentRoot);
-    const treeLayout = tree<TreeNode>().size([
-      canopyW - nodeWidth,
-      canopyH - nodeHeight,
-    ]);
-    treeLayout(root);
-
-    // ── Content group (starts invisible for fade-in) ─────────────────────
-    const g = svg
-      .append("g")
-      .attr("class", "tree-content")
-      .attr(
-        "transform",
-        `translate(${canopyLeft + nodeWidth / 2}, ${canopyTop + nodeHeight / 2})`
-      )
-      .style("opacity", "0");
-
-    // ── Links ────────────────────────────────────────────────────────────
-    const links = root.links() as HierarchyPointLink<TreeNode>[];
-    const linkGen = linkVertical<
-      HierarchyPointLink<TreeNode>,
-      HierarchyPointNode<TreeNode>
-    >()
-      .x((d) => d.x)
-      .y((d) => d.y);
-
-    g.selectAll(".link")
-      .data(links)
-      .enter()
-      .append("path")
-      .attr("class", "link")
-      .attr("fill", "none")
-      .attr("stroke", "#6B3A1F")
-      .attr("stroke-width", 3.5)
-      .attr("stroke-opacity", 0)
-      .attr("stroke-linecap", "round")
-      .attr("d", linkGen)
-      .transition()
-      .delay((_d, i) => i * 60 + ANIM_DURATION * 0.25)
-      .duration(ANIM_DURATION * 0.7)
-      .attr("stroke-opacity", 0.8);
-
-    // ── Nodes ────────────────────────────────────────────────────────────
-    const descendants = root.descendants() as HierarchyPointNode<TreeNode>[];
-
-    const node = g
-      .selectAll(".node")
-      .data(descendants)
-      .enter()
-      .append("g")
-      .attr("class", "node")
-      .attr(
-        "transform",
-        (d) =>
-          `translate(${(d.x || 0) - nodeWidth / 2}, ${
-            (d.y || 0) - nodeHeight / 2
-          })`
-      )
-      .style("opacity", 0);
-
-    node
-      .transition()
-      .delay((_d, i) => i * 70 + ANIM_DURATION * 0.15)
-      .duration(ANIM_DURATION * 0.8)
-      .style("opacity", 1);
-
-    const fo = node
-      .append("foreignObject")
-      .attr("width", nodeWidth)
-      .attr("height", nodeHeight)
-      .style("overflow", "visible");
-
-    fo.append("xhtml:div")
-      .style("width", `${nodeWidth}px`)
-      .style("height", `${nodeHeight}px`)
-      .html((d) => {
-        const hasChildren = d.data.children && d.data.children.length > 0;
-        const isRoot = d.depth === 0;
-        const ringColor = isRoot
-          ? "rgba(107,58,31,0.55)"
-          : hasChildren
-          ? "rgba(59,130,246,0.55)"
-          : "rgba(107,58,31,0.30)";
-        const glowColor = isRoot
-          ? "rgba(107,58,31,0.18)"
-          : hasChildren
-          ? "rgba(59,130,246,0.13)"
-          : "transparent";
-        const badge = isRoot
-          ? `<span style="
-              margin-top:3px;font-size:9px;font-weight:700;letter-spacing:.5px;
-              color:#92400e;background:rgba(254,243,199,0.95);
-              padding:2px 6px;border-radius:20px;width:fit-content;
-              border:1px solid rgba(180,120,30,0.3);
-            ">👑 ROOT</span>`
-          : hasChildren
-          ? `<span style="
-              margin-top:3px;font-size:9px;font-weight:700;letter-spacing:.5px;
-              color:#1e40af;background:rgba(219,234,254,0.95);
-              padding:2px 6px;border-radius:20px;width:fit-content;
-              border:1px solid rgba(59,130,246,0.3);
-            ">🔍 Klik untuk masuk</span>`
-          : "";
-
-        return `
-          <div
-            data-node="${d.data.name}"
-            style="
-              display:flex;align-items:center;gap:10px;padding:10px;
-              width:${nodeWidth}px;height:${nodeHeight}px;box-sizing:border-box;
-              background:rgba(255,255,255,0.88);
-              backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-              border:1.5px solid rgba(255,255,255,0.80);
-              border-radius:18px;
-              box-shadow:0 4px 22px rgba(0,0,0,0.18),0 0 0 2px ${glowColor};
-              transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s;
-              cursor:${hasChildren && !isRoot ? "pointer" : "default"};
-              font-family:system-ui,sans-serif;
-              outline:2px solid ${hasChildren && !isRoot ? "rgba(59,130,246,0.25)" : "transparent"};
-            "
-            onmouseenter="
-              this.style.transform='scale(1.07)';
-              this.style.boxShadow='0 10px 36px rgba(0,0,0,0.28),0 0 0 2px ${ringColor}';
-            "
-            onmouseleave="
-              this.style.transform='scale(1)';
-              this.style.boxShadow='0 4px 22px rgba(0,0,0,0.18),0 0 0 2px ${glowColor}';
-            "
-          >
-            <img
-              src="${d.data.image}"
-              style="
-                width:56px;height:56px;border-radius:50%;flex-shrink:0;
-                border:2.5px solid ${ringColor};
-                object-fit:cover;background:#e5e7eb;
-                box-shadow:0 2px 8px rgba(0,0,0,0.14);
-              "
-              alt="${d.data.name}"
-            />
-            <div style="display:flex;flex-direction:column;min-width:0;flex:1;overflow:hidden;">
-              <span style="
-                font-size:14px;font-weight:700;color:#1f2937;
-                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-              ">${d.data.name}</span>
-              ${
-                d.data.birthYear
-                  ? `<span style="margin-top:3px;font-size:10px;font-weight:600;color:#92400e;
-                      background:rgba(254,243,199,0.9);padding:2px 6px;border-radius:4px;width:fit-content;">
-                      🎂 ${d.data.birthYear}</span>`
-                  : ""
-              }
-              ${
-                d.data.residence
-                  ? `<span style="margin-top:2px;font-size:10px;font-weight:500;color:#065f46;
-                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                      📍 ${d.data.residence}</span>`
-                  : ""
-              }
-              ${badge}
-            </div>
-          </div>`;
-      });
-
-    // ── Fade-in content group ────────────────────────────────────────────
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!svgRef.current) return;
-        const contentEl =
-          svgRef.current.querySelector<SVGGElement>(".tree-content");
-        if (contentEl) {
-          contentEl.style.transition = `opacity ${ANIM_DURATION}ms cubic-bezier(.4,0,.2,1)`;
-          contentEl.style.opacity = "1";
-        }
-        // Unlock: reset BOTH ref and state so next click is immediately allowed
-        animatingRef.current = false;
-        setAnimating(false);
-      });
+    // Clip paths
+    const allNames = Object.keys(FIXED_SLOTS);
+    allNames.forEach(name => {
+      defs.append("clipPath").attr("id", `cp-${name.replace(/[\s.]/g,"_")}`)
+        .append("circle").attr("r", R - 2);
     });
 
-    // ── Click handler — reads from REFS, never stale ─────────────────────
-    const svgEl = svgRef.current!;
-    const handleClick = (e: MouseEvent) => {
-      // Guard via ref — always the live value, no stale closure issue
-      if (animatingRef.current) return;
+    // Content group
+    const g = svg.append("g").attr("class","tree-content").style("opacity","0");
 
-      const card = (e.target as HTMLElement).closest<HTMLElement>(
-        "[data-node]"
-      );
-      if (!card) return;
-      const nodeName = card.getAttribute("data-node");
-      if (!nodeName) return;
+    // ── Edges ─────────────────────────────────────────────────────────────
+    const visEdges = ALL_EDGES.filter(([a,b]) =>
+      isRoot ? true : subNames.has(a) && subNames.has(b)
+    );
+    visEdges.forEach(([pName, cName], i) => {
+      const ps = FIXED_SLOTS[pName]; const cs = FIXED_SLOTS[cName];
+      if (!ps || !cs) return;
+      const [px,py] = toXY(...ps);
+      const [cx,cy] = toXY(...cs);
+      const my = (py + cy) / 2;
+      g.append("path")
+        .attr("fill","none")
+        .attr("stroke","#7a4020").attr("stroke-width",1.8)
+        .attr("stroke-opacity",0).attr("stroke-linecap","round")
+        .attr("d",`M${px},${py} C${px},${my} ${cx},${my} ${cx},${cy}`)
+        .transition().delay(i*40 + ANIM*0.2).duration(ANIM*0.8)
+        .attr("stroke-opacity", 0.6);
+    });
 
-      // Walk subtree of the CURRENT root (via ref)
-      const findNode = (n: TreeNode): TreeNode | null => {
-        if (n.name === nodeName) return n;
-        for (const c of n.children ?? []) {
-          const res = findNode(c);
-          if (res) return res;
-        }
-        return null;
-      };
+    // ── Nodes ─────────────────────────────────────────────────────────────
+    // family members
+    const familyMembers = flattenTree(familyData);
+    const toRender: { data: TreeNode; isAnc: boolean }[] = [
+      ...familyMembers.map(d => ({ data: d, isAnc: false })),
+      ...(isRoot ? ANCESTORS.map(d => ({ data: d as TreeNode, isAnc: true })) : []),
+    ];
 
-      // Use currentRootRef so we always search the live tree
-      const clicked = findNode(currentRootRef.current);
-      if (!clicked || !clicked.children?.length) return;
+    toRender.forEach(({ data: nd, isAnc }, i) => {
+      const slot = FIXED_SLOTS[nd.name];
+      if (!slot) return;
+      // In sub-tree view, only show sub-tree members
+      if (!isAnc && !subNames.has(nd.name)) return;
 
-      // Don't navigate into the root card itself
-      const hier = hierarchy(currentRootRef.current);
-      const clickedHier = hier
-        .descendants()
-        .find((d) => d.data.name === nodeName);
-      if (!clickedHier || clickedHier.depth === 0) return;
+      const [nx, ny] = toXY(...slot);
+      const depth    = isAnc ? -1 : (depthMap[nd.name] ?? 0);
+      const isRootNode = nd.name === currentRoot.name;
+      const hasKids  = !isAnc && !!(nd.children?.length);
+      const clipId   = `cp-${nd.name.replace(/[\s.]/g,"_")}`;
 
-      const globalPath = findPath(familyData, nodeName) ?? [];
-      doNavigate(clicked, globalPath);
-    };
+      const ringCol  = isAnc ? "#a0826d"
+        : isRootNode  ? "#78350f"
+        : hasKids     ? "#3b82f6"
+        : "#9ca3af";
 
-    svgEl.addEventListener("click", handleClick);
-    return () => {
-      svgEl.removeEventListener("click", handleClick);
-    };
-  // Only re-run when the displayed root changes, NOT when animating changes.
-  // All animating guards now go through animatingRef (the ref), not state.
+      const nodeG = g.append("g")
+        .attr("transform",`translate(${nx},${ny})`)
+        .style("opacity",0)
+        .style("cursor", hasKids && !isRootNode ? "pointer" : "default");
+
+      nodeG.transition()
+        .delay(i * 55 + ANIM * 0.1)
+        .duration(ANIM * 0.85)
+        .style("opacity",1);
+
+      // Glow
+      nodeG.append("circle").attr("r", R+7)
+        .attr("fill", isAnc ? "rgba(160,130,109,0.10)" : isRootNode ? "rgba(120,53,15,0.15)" : hasKids ? "rgba(59,130,246,0.13)" : "rgba(150,150,150,0.07)")
+        .attr("stroke", ringCol).attr("stroke-opacity",0.32).attr("stroke-width",1.5);
+
+      // White base
+      nodeG.append("circle").attr("r", R+2).attr("fill","white").style("filter","url(#sh)");
+
+      // Photo
+      nodeG.append("image")
+        .attr("href", nd.image ?? "")
+        .attr("x",-(R-2)).attr("y",-(R-2))
+        .attr("width",(R-2)*2).attr("height",(R-2)*2)
+        .attr("clip-path",`url(#${clipId})`)
+        .attr("preserveAspectRatio","xMidYMid slice");
+
+      // Border
+      nodeG.append("circle").attr("r",R)
+        .attr("fill","none").attr("stroke",ringCol).attr("stroke-width",2.8);
+
+      // Name banner
+      const bW=88, bH=19, bY=R+5;
+      nodeG.append("rect")
+        .attr("x",-bW/2).attr("y",bY)
+        .attr("width",bW).attr("height",bH).attr("rx",9)
+        .attr("fill","rgba(254,243,199,0.96)")
+        .attr("stroke","rgba(161,98,7,0.42)").attr("stroke-width",1);
+      nodeG.append("text")
+        .attr("x",0).attr("y",bY+12.5).attr("text-anchor","middle")
+        .attr("font-family","system-ui,sans-serif")
+        .attr("font-size","10.5px").attr("font-weight","700")
+        .attr("fill","#78350f").text(nd.name);
+
+      // Birth year
+      if (nd.birthYear) {
+        nodeG.append("text")
+          .attr("x",0).attr("y",bY+bH+11).attr("text-anchor","middle")
+          .attr("font-family","system-ui,sans-serif")
+          .attr("font-size","9px").attr("font-weight","500")
+          .attr("fill","#6b7280").text(`🎂 ${nd.birthYear}`);
+      }
+
+      // Crown for root
+      if (isRootNode) {
+        nodeG.append("text").attr("x",R-2).attr("y",-(R-2))
+          .attr("text-anchor","middle").attr("font-size","13px").text("👑");
+      }
+
+      // Blue expand badge
+      if (hasKids && !isRootNode) {
+        nodeG.append("circle").attr("cx",R-2).attr("cy",-(R-2))
+          .attr("r",8).attr("fill","#3b82f6")
+          .attr("stroke","white").attr("stroke-width",2);
+        nodeG.append("text").attr("x",R-2).attr("y",-(R-2)+4)
+          .attr("text-anchor","middle")
+          .attr("font-size","10px").attr("font-weight","700")
+          .attr("fill","white").text("›");
+      }
+
+      // Ancestor label
+      if (isAnc) {
+        nodeG.append("text").attr("x",R-2).attr("y",-(R-2))
+          .attr("text-anchor","middle").attr("font-size","12px").text("🕌");
+      }
+
+      // Hover + click
+      if (hasKids && !isRootNode) {
+        nodeG
+          .on("pointerenter", function() {
+            select(this).raise().transition().duration(100)
+              .attr("transform",`translate(${nx},${ny}) scale(1.10)`);
+          })
+          .on("pointerleave", function() {
+            select(this).transition().duration(100)
+              .attr("transform",`translate(${nx},${ny}) scale(1)`);
+          })
+          .on("click", function() {
+            if (animRef.current) return;
+            const path = findPath(familyData, nd.name) ?? [];
+            doNavigate(nd, path);
+          });
+      }
+
+      void depth;
+    });
+
+    // Fade in
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!svgRef.current) return;
+      const el = svgRef.current.querySelector<SVGGElement>(".tree-content");
+      if (el) { el.style.transition = `opacity ${ANIM}ms cubic-bezier(.4,0,.2,1)`; el.style.opacity = "1"; }
+      animRef.current = false;
+      setAnimating(false);
+    }));
   }, [currentRoot]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Breadcrumb back navigation ───────────────────────────────────────────
-  const goToBreadcrumb = (node: TreeNode, index: number) => {
-    if (node.name === currentRootRef.current.name) return;
-    const newCrumb = breadcrumb.slice(0, index + 1);
-    doNavigate(node, newCrumb);
+  const goToBreadcrumb = (node: TreeNode, i: number) => {
+    if (node.name === rootRef.current.name) return;
+    doNavigate(node, breadcrumb.slice(0, i + 1));
   };
 
   return (
-    <div ref={containerRef} className="w-full h-full overflow-hidden relative">
-      {/* ── Breadcrumb nav ── */}
+    <div ref={containerRef} className="relative overflow-hidden"
+      style={{
+        height: "min(92vh, 860px)",
+        width:  "calc(min(92vh, 860px) * 0.762)",
+        borderRadius: 20, flexShrink: 0,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.38), 0 6px 24px rgba(0,0,0,0.20)",
+        background: "#f5ede0",
+      }}
+    >
+      {/* Breadcrumb */}
       {breadcrumb.length > 1 && (
-        <nav
-          style={{
-            position: "absolute",
-            top: 14,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            background: "rgba(255,255,255,0.82)",
-            backdropFilter: "blur(18px)",
-            WebkitBackdropFilter: "blur(18px)",
-            borderRadius: 40,
-            padding: "6px 16px",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
-            border: "1.5px solid rgba(255,255,255,0.85)",
-            fontFamily: "system-ui,sans-serif",
-            fontSize: 13,
-            fontWeight: 600,
-            userSelect: "none",
-            whiteSpace: "nowrap",
-            maxWidth: "90vw",
-            overflowX: "auto",
-          }}
-        >
+        <nav style={{
+          position:"absolute", top:12, left:"50%", transform:"translateX(-50%)",
+          zIndex:10, display:"flex", alignItems:"center", gap:5,
+          background:"rgba(255,255,255,0.90)", backdropFilter:"blur(16px)",
+          WebkitBackdropFilter:"blur(16px)", borderRadius:40,
+          padding:"5px 14px", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
+          border:"1.5px solid rgba(255,255,255,0.9)",
+          fontFamily:"system-ui,sans-serif", fontSize:12, fontWeight:600,
+          userSelect:"none", whiteSpace:"nowrap", maxWidth:"88%", overflowX:"auto",
+        }}>
           {breadcrumb.map((node, i) => (
-            <span
-              key={node.name}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <button
-                onClick={() => goToBreadcrumb(node, i)}
-                style={{
-                  background:
-                    i === breadcrumb.length - 1
-                      ? "rgba(107,58,31,0.12)"
-                      : "transparent",
-                  border: "none",
-                  borderRadius: 20,
-                  padding: "3px 10px",
-                  cursor:
-                    i === breadcrumb.length - 1 ? "default" : "pointer",
-                  color:
-                    i === breadcrumb.length - 1 ? "#92400e" : "#374151",
-                  fontWeight: i === breadcrumb.length - 1 ? 700 : 500,
-                  fontSize: 13,
-                  transition: "background .15s, color .15s",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-                onMouseEnter={(e) => {
-                  if (i < breadcrumb.length - 1)
-                    (e.currentTarget as HTMLButtonElement).style.background =
-                      "rgba(59,130,246,0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  if (i < breadcrumb.length - 1)
-                    (e.currentTarget as HTMLButtonElement).style.background =
-                      "transparent";
-                }}
-              >
-                <img
-                  src={node.image}
-                  alt={node.name}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
-                />
+            <span key={node.name} style={{display:"flex",alignItems:"center",gap:5}}>
+              <button onClick={() => goToBreadcrumb(node, i)} style={{
+                background: i===breadcrumb.length-1 ? "rgba(107,58,31,0.12)" : "transparent",
+                border:"none", borderRadius:20, padding:"3px 9px",
+                cursor: i===breadcrumb.length-1 ? "default" : "pointer",
+                color: i===breadcrumb.length-1 ? "#92400e" : "#374151",
+                fontWeight: i===breadcrumb.length-1 ? 700 : 500, fontSize:12,
+                display:"flex", alignItems:"center", gap:5,
+              }}>
+                <img src={node.image} alt={node.name}
+                  style={{width:18,height:18,borderRadius:"50%",objectFit:"cover"}} />
                 {node.name}
               </button>
-              {i < breadcrumb.length - 1 && (
-                <span style={{ color: "#9ca3af", fontSize: 12 }}>›</span>
-              )}
+              {i < breadcrumb.length-1 &&
+                <span style={{color:"#9ca3af",fontSize:11}}>›</span>}
             </span>
           ))}
         </nav>
       )}
 
-      {/* ── Hint label ── */}
+      {/* Hint */}
       {currentRoot === familyData && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 28,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10,
-            background: "rgba(255,255,255,0.75)",
-            backdropFilter: "blur(12px)",
-            borderRadius: 40,
-            padding: "6px 18px",
-            fontSize: 12,
-            fontWeight: 500,
-            color: "#6b7280",
-            fontFamily: "system-ui,sans-serif",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.10)",
-            border: "1px solid rgba(255,255,255,0.8)",
-            animation: "pulse-hint 2.5s ease-in-out infinite",
-            whiteSpace: "nowrap",
-          }}
-        >
-          💡 Klik kartu biru untuk melihat keturunannya
+        <div style={{
+          position:"absolute", bottom:18, left:"50%", transform:"translateX(-50%)",
+          zIndex:10, background:"rgba(255,255,255,0.80)", backdropFilter:"blur(10px)",
+          borderRadius:40, padding:"5px 16px", fontSize:11, fontWeight:500,
+          color:"#6b7280", fontFamily:"system-ui,sans-serif",
+          boxShadow:"0 2px 12px rgba(0,0,0,0.10)",
+          border:"1px solid rgba(255,255,255,0.8)",
+          animation:"pulse-hint 2.5s ease-in-out infinite", whiteSpace:"nowrap",
+        }}>
+          💡 Klik lingkaran biru untuk melihat cabang keturunan
         </div>
       )}
 
@@ -562,8 +452,8 @@ export default function FamilyTree() {
 
       <style>{`
         @keyframes pulse-hint {
-          0%, 100% { opacity: 0.7; transform: translateX(-50%) translateY(0); }
-          50% { opacity: 1; transform: translateX(-50%) translateY(-3px); }
+          0%,100%{opacity:.7;transform:translateX(-50%) translateY(0)}
+          50%{opacity:1;transform:translateX(-50%) translateY(-3px)}
         }
       `}</style>
     </div>
