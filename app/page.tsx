@@ -37,11 +37,19 @@ export default function Home() {
       {/* 2. Main Content Area */}
       <main className="flex-1 relative flex flex-col min-w-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.8)_0%,rgba(255,248,240,0)_70%)]">
         
-        {/* Subtle dynamic background effects - Light & Airy */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
-          <div className="absolute top-[-10%] right-[5%] w-[60%] h-[60%] bg-blue-100/40 blur-[140px] rounded-full animate-pulse" />
-          <div className="absolute bottom-[-10%] left-[5%] w-[50%] h-[50%] bg-orange-100/30 blur-[120px] rounded-full" />
+        {/* Full-screen Warm Brown Ambient Background (No Green) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+          {/* Soft base background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FFF8F0] via-[#f7e9da] to-[#eddbce] opacity-90" />
+          
+          {/* Rich brown and golden blurs simulating depth of field wood tones */}
+          <div className="absolute top-[-20%] left-[10%] w-[70%] h-[70%] bg-[#8B5A2B]/15 blur-[160px] rounded-full mix-blend-multiply" />
+          <div className="absolute bottom-[-10%] right-[5%] w-[80%] h-[60%] bg-[#A0522D]/10 blur-[150px] rounded-full mix-blend-multiply" />
+          <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-[#CD853F]/15 blur-[120px] rounded-full mix-blend-multiply" />
         </div>
+
+        {/* Soft atmospheric overlay */}
+        <div className="absolute inset-0 bg-[#FFF8F0]/30 mix-blend-overlay pointer-events-none z-0" />
 
         {/* 3. Top Header / Navigation - Inverted Colors */}
         <header className="px-10 py-8 flex items-center justify-between z-30 shrink-0 select-none">

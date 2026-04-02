@@ -56,22 +56,14 @@ export default function FamilyTree({
     shad.append("feDropShadow").attr("dx",0).attr("dy",1.5).attr("stdDeviation",2)
       .attr("flood-color","rgba(0,0,0,0.1)");
 
-    // Blur Filter for background
-    const blurFilter = defs.append("filter").attr("id", "b30");
-    blurFilter.append("feGaussianBlur").attr("in", "SourceGraphic").attr("stdDeviation", 6);
+    // Removed local blurred background and rect; handled globally by page.tsx.
 
-    // Background Color Layer
-    svg.append("rect")
-      .attr("width", W).attr("height", H)
-      .attr("fill", "#FFF8F0");
-
-    // Background Image
+    // 1. Main Sharp Tree Image
     svg.append("image")
       .attr("href", "/tree-bg2.png")
       .attr("width", W).attr("height", H).attr("x",0).attr("y",0)
       .attr("preserveAspectRatio","xMidYMid meet")
-      .attr("opacity", 0.7)
-      .style("mix-blend-mode", "multiply");
+      .attr("opacity", 0.95);
 
     // Scaling helpers
     const scale  = Math.min(W / IMG_W, H / IMG_H);
@@ -180,11 +172,25 @@ export default function FamilyTree({
         .attr("fill","#0f172a").text(nd.name.toUpperCase());
 
       if (nd.birthYear) {
+        // Pill capsule background for the year (ensures perfect contrast over tree background)
+        const yW = 36, yH = 13, yY = bY + bH + 2;
+        nodeG.append("rect")
+          .attr("x", -yW/2).attr("y", yY)
+          .attr("width", yW).attr("height", yH).attr("rx", 6)
+          .attr("fill", "rgba(255,255,255,0.95)")
+          .attr("stroke", "rgba(15,23,42,0.08)").attr("stroke-width", 1)
+          .style("filter", "url(#sh)");
+
+        // Crisp dark text inside the pill
         nodeG.append("text")
-          .attr("x",0).attr("y",bY+bH+9).attr("text-anchor","middle")
-          .attr("font-family","'Outfit', sans-serif")
-          .attr("font-size","7.5px").attr("font-weight","600")
-          .attr("fill","#64748b").text(nd.birthYear);
+          .attr("x", 0).attr("y", yY + 9)
+          .attr("text-anchor", "middle")
+          .attr("font-family", "'Outfit', sans-serif")
+          .attr("font-size", "7.5px")
+          .attr("font-weight", "800")
+          .attr("letter-spacing", "0.5px")
+          .attr("fill", "#0f172a")
+          .text(nd.birthYear);
       }
 
       // Root/Ancestor decorators
