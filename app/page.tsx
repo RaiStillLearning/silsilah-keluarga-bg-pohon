@@ -72,7 +72,7 @@ export default function Home() {
                           : "text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-bold"
                       }`}
                     >
-                      <img src={node.image} alt="" className="w-5.5 h-5.5 rounded-full border border-white shadow-sm p-0.5 bg-white" />
+                      <img src={node.image} alt="" className="w-5.5 h-5.5 rounded-   border border-white shadow-sm p-0.5 bg-white" />
                       <span className="text-[10px] tracking-widest uppercase">{node.name}</span>
                     </button>
                     {i < breadcrumb.length - 1 && (
