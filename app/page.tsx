@@ -40,12 +40,12 @@ export default function Home() {
         {/* Full-screen Warm Brown Ambient Background (No Green) */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
           {/* Soft base background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#FFF8F0] via-[#f7e9da] to-[#eddbce] opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FFF8F0] via-[#f7e9da] to-[#eddbce]  opacity-90" />
           
           {/* Rich brown and golden blurs simulating depth of field wood tones */}
-          <div className="absolute top-[-20%] left-[10%] w-[70%] h-[70%] bg-[#8B5A2B]/15 blur-[160px] rounded-full mix-blend-multiply" />
-          <div className="absolute bottom-[-10%] right-[5%] w-[80%] h-[60%] bg-[#A0522D]/10 blur-[150px] rounded-full mix-blend-multiply" />
-          <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-[#CD853F]/15 blur-[120px] rounded-full mix-blend-multiply" />
+          <div className="absolute top-[-20%] left-[10%] w-[70%] h-[70%] bg-[#8B5A2B]/15 blur-[200px] rounded-full mix-blend-multiply" />
+          <div className="absolute bottom-[-10%] right-[5%] w-[80%] h-[60%] bg-[#A0522D]/10 blur-[200px] rounded-full mix-blend-multiply" />
+          <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-[#CD853F]/15 blur-[200px] rounded-full mix-blend-multiply" />
         </div>
 
         {/* Soft atmospheric overlay */}

@@ -122,10 +122,15 @@ export default function FamilyTree({
       const hasKids  = !isAnc && !!(nd.children?.length);
       const clipId   = `cp-${nd.name.replace(/[\s.]/g,"_")}`;
 
+      const isGreen = i % 2 === 0;
       const ringCol  = isAnc ? "#b45309" // Warm gold/brown
-        : isCurrentFocus  ? "#2563eb" // Bright blue
-        : hasKids     ? "#60a5fa" // Light blue
-        : "#cbd5e1"; // Slate 300
+        : isCurrentFocus  ? "#f59e0b" // Amber for active focus
+        : isGreen     ? "#10b981" // Emerald green
+        : "#3b82f6"; // Blue
+
+      const glowCol = isCurrentFocus ? "rgba(245,158,11,0.15)"
+        : isGreen ? "rgba(16,185,129,0.08)"
+        : "rgba(59,130,246,0.08)";
 
       const nodeG = g.append("g")
         .attr("transform",`translate(${nx},${ny})`)
@@ -137,10 +142,10 @@ export default function FamilyTree({
         .duration(ANIM * 0.8)
         .style("opacity",1);
 
-      // Glow effect - Subtle light shadows
+      // Glow effect - Subtle light shadows corresponding to ring color
       nodeG.append("circle").attr("r", R+5)
-        .attr("fill", isCurrentFocus ? "rgba(37,99,235,0.08)" : hasKids ? "rgba(96,165,250,0.05)" : "rgba(203,213,225,0.02)")
-        .attr("stroke", ringCol).attr("stroke-opacity",0.15).attr("stroke-width",1);
+        .attr("fill", glowCol)
+        .attr("stroke", ringCol).attr("stroke-opacity",0.2).attr("stroke-width",1);
 
       // White base circle
       nodeG.append("circle").attr("r", R+1.5).attr("fill","white").style("filter","url(#sh)");
